@@ -1,0 +1,92 @@
+use tokio:: {
+    net::{TcpListener, TcpStream},
+    sync::broadcast,
+    io:: {AsyncBufReadExt, AsyncWriteExt, BufReader}
+};
+use serde::{Serialize, Deserialize};
+use chrono::Local;
+use std::error::Error;
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct ChatMessage {
+    pub username: String,
+    pub message: String,
+    pub timestamp: String,
+    message_type: MessageType,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+enum MessageType {
+    UserMessage,
+    SystemNotification,
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    let listener = TcpListener::bind("127.0.0.1:8080").await?;
+
+    println!("╔════════════════════════════════════════╗");
+    println!("║        RETRO CHAT SERVER ACTIVE        ║");
+    println!("║        Port: 8082  Host: 127.0.0.1     ║");
+    println!("║        Press Ctrl+C to shutdown        ║");
+    println!("╚════════════════════════════════════════╝");
+
+    let (tx, _) = broadcast::channel::<String>(100);
+
+    loop {
+        let (socket, addr) = listener.accept().await?;
+
+        println!("┌─[{}] New connection", Local::now().format("%H:%M:%S"));
+        println!("└─ Address: {}", addr);
+
+        let tx = tx.clone();
+        let rx = rx.clone();
+
+        tokio::spawn(async move {
+            handle_connection(socket, tx, rx).await;
+        })
+    }
+}
+
+async fn handle_connection(
+    mut socket: TcpStream,
+    tx: broadcast::Sender<String>,
+    rx: broadcast::Receiver<String>
+) {
+
+    let (reader, mut writer) = socket.split();
+    let mut reader = BufReader::new(reader);
+    let mut username = String::new();
+
+    reader.read_line(&mut username).await.unwrap();
+    let username = username.trim().to_string();
+
+    let join_msg = ChatMessage {
+        username: username.clone(),
+        content: "joined the chat".to_string(),
+        timestamp: Local::now().format("%H:%M:%S").to_string(),
+        message_type: MessageType::SystemNotification,
+    };
+    let join_json = serde_json::to_string(&join_msg).unwrap();
+    tx.send(join_json).unwrap();
+
+
+    let mut line = String::new();
+
+    loop {
+        tokio::select! {
+            result = reader.read_line(&mut line) => {
+                if result.unwrap() == 0 {
+                    break;
+                }
+                let msg = ChatMessage {
+                    username: username.clone(),
+                    content: line.trim().to_string(),
+                     timestamp: Local::now().format("%H:%M:%S").to_string(),
+                    message_type: MessageType::UserMessage,
+                }
+
+            }
+        }
+    }
+}
