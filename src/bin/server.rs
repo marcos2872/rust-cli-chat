@@ -86,7 +86,25 @@ async fn handle_connection(
                     message_type: MessageType::UserMessage,
                 }
 
+                let json = serde_json::to_string(&msg).unwrap();
+                tx.send(json).unwrap();
+                line.clear();
+            }
+            result = rx.recv() => {
+                let msg = result.unwrap();
+                writer.write_all(msg.as_bytes()).await.unwrap();
+                writer.write_all(b"\n").await.unwrap();
             }
         }
     }
+    let leave_msg = ChatMessage {
+        username: username.clone(),
+        content: "left the chat".to_string(),
+        timestamp: Local::now().format("%H:%M:%S").to_string(),
+        message_type: MessageType::SystemNotification
+    };
+    let leave_json = serde_json::to_string(&leave_msg).unwrap();
+    tx.send(leave_json).unwrap();
+
+    println!("└─[{}] {} disconnected", Local::now().format("%H:%M:%S"), username);
 }
