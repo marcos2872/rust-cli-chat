@@ -43,3 +43,7 @@ cargo run --bin client your-username
 ### Client
 ![Client](images/client1.png)
 ![Client](images/client2.png)
+
+## 📚 References
+-   **Project Inspiration**: [Rust CLI Chat Tutorial](https://www.youtube.com/watch?v=653rafFNBmA&t=1710s)
+-   **Code Documentation**: [CODE_DOCUMENTATION.md](CODE_DOCUMENTATION.md)
