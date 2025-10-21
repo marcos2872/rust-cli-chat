@@ -171,6 +171,22 @@ fn send_message(siv: &mut Cursive, msg: String) {
         }
         _ => {}
     }
+
+    let writer = siv
+        .user_data::<Arc<Mutex<tokio::net::tcp::OwnedWriteHalf>>>()
+        .unwrap()
+        .clone();
+    tokio::spawn(async move {
+        let _ = writer
+            .lock()
+            .await
+            .write_all(format!("{}\n", msg).as_bytes())
+            .await;
+    });
+
+    siv.call_on_name("input", |view: &mut EditView| {
+        view.set_content("");
+    });
 }
 
 fn create_retro_theme() -> Theme {
